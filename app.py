@@ -52,3 +52,7 @@ def transliterate_api():
     input_text = data.get("text", "")
     output_text = transliterate(input_text)
     return jsonify({"output": output_text})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
+
