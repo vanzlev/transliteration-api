@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 import torch
 import json
-from model import Encoder, Decoder, Seq2Seq  # Save your model classes in model.py
+from model import Encoder, Decoder, Seq2Seq
 import torch.nn.functional as F
 
 app = Flask(__name__)
@@ -24,7 +24,7 @@ model = Seq2Seq(encoder, decoder).to(DEVICE)
 model.load_state_dict(torch.load("gru_model.pth", map_location=DEVICE))
 model.eval()
 
-# Inference function
+# Single-word transliteration
 def transliterate(text):
     input_ids = [input_vocab["<sos>"]] + [input_vocab.get(c, 0) for c in text] + [input_vocab["<eos>"]]
     src_tensor = torch.tensor(input_ids).unsqueeze(0).to(DEVICE)
@@ -36,7 +36,7 @@ def transliterate(text):
         decoder_hidden = encoder_hidden
 
         output_chars = []
-        for _ in range(50):  # max length
+        for _ in range(50):
             output, decoder_hidden = model.decoder(decoder_input, decoder_hidden)
             top1 = output.argmax(1)
             if top1.item() == output_vocab["<eos>"]:
@@ -46,11 +46,17 @@ def transliterate(text):
 
         return ''.join(output_chars)
 
+# Sentence-level transliteration using word-by-word processing
+def transliterate_sentence(text):
+    words = text.strip().split()
+    transliterated_words = [transliterate(word) for word in words]
+    return ' '.join(transliterated_words)
+
 @app.route("/transliterate", methods=["POST"])
 def transliterate_api():
     data = request.json
     input_text = data.get("text", "")
-    output_text = transliterate(input_text)
+    output_text = transliterate_sentence(input_text)
     return jsonify({"output": output_text})
 
 if __name__ == "__main__":
